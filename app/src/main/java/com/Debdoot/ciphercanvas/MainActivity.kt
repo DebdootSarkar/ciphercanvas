@@ -1,4 +1,4 @@
-package com.yourname.ciphercanvas
+package com.Debdoot.ciphercanvas
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity

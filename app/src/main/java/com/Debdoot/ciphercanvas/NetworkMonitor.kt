@@ -1,4 +1,4 @@
-package com.yourname.ciphercanvas
+package com.Debdoot.ciphercanvas
 
 import android.content.Context
 import java.io.BufferedReader

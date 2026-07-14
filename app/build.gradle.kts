@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "com.yourname.ciphercanvas"
+    namespace = "com.Debdoot.ciphercanvas"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.yourname.ciphercanvas"
+        applicationId = "com.Debdoot.ciphercanvas"
         minSdk = 24
         targetSdk = 34
         versionCode = 1
