@@ -1,0 +1,144 @@
+package com.Debdoot.ciphercanvas
+
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
+import kotlin.random.Random
+
+data class Particle(
+    var x: Float,
+    var y: Float,
+    val speedX: Float,
+    val speedY: Float,
+    val radius: Float,
+    val color: Color,
+    val alpha: Float
+)
+
+@Composable
+fun CipherCanvasArt(state: SecurityState, modifier: Modifier = Modifier) {
+    // Animation loop for movement
+    val infiniteTransition = rememberInfiniteTransition()
+    val tick by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(100, easing = LinearEasing))
+    )
+
+    // Generate particles based on state
+    val particles = remember { mutableStateListOf<Particle>() }
+
+    // Define background color and particle properties per state
+    val backgroundColor = when (state) {
+        SecurityState.SAFE -> Color(0xFF87CEEB)    // light sky blue
+        SecurityState.SUSPICIOUS -> Color(0xFFFFA500) // orange
+        SecurityState.DANGER -> Color(0xFF1A0000)     // dark crimson
+    }
+
+    // Seed particles when state changes or initially
+    LaunchedEffect(state) {
+        particles.clear()
+        val count = when (state) {
+            SecurityState.SAFE -> 30
+            SecurityState.SUSPICIOUS -> 50
+            SecurityState.DANGER -> 80
+        }
+        val baseColor = when (state) {
+            SecurityState.SAFE -> Color(0xFFFFB6C1) // pink petals
+            SecurityState.SUSPICIOUS -> Color(0xFFD2691E) // brown leaves
+            SecurityState.DANGER -> Color(0xFFFF0000) // red glitch sparks
+        }
+        repeat(count) {
+            particles.add(
+                Particle(
+                    x = Random.nextFloat(),
+                    y = Random.nextFloat(),
+                    speedX = Random.nextFloat() * 0.01f - 0.005f,
+                    speedY = Random.nextFloat() * 0.02f + 0.005f,
+                    radius = Random.nextFloat() * 8f + 2f,
+                    color = baseColor.copy(alpha = Random.nextFloat() * 0.8f + 0.2f),
+                    alpha = Random.nextFloat() * 0.8f + 0.2f
+                )
+            )
+        }
+    }
+
+    // Update particle positions on every frame
+    LaunchedEffect(tick) {
+        particles.forEach { p ->
+            p.x += p.speedX
+            p.y += p.speedY
+            if (p.x < -0.1f) p.x = 1.1f
+            if (p.x > 1.1f) p.x = -0.1f
+            if (p.y > 1.1f) p.y = -0.1f
+        }
+    }
+
+    Canvas(modifier = modifier.fillMaxSize()) {
+        // Draw background
+        drawRect(color = backgroundColor)
+
+        // Draw particles
+        particles.forEach { p ->
+            val x = p.x * size.width
+            val y = p.y * size.height
+            drawCircle(
+                color = p.color,
+                radius = p.radius,
+                center = Offset(x, y),
+                alpha = p.alpha
+            )
+        }
+
+        // Draw state-specific imagery
+        when (state) {
+            SecurityState.SAFE -> {
+                // Sun
+                drawCircle(
+                    color = Color(0xFFFFD700),
+                    radius = 60f,
+                    center = Offset(size.width * 0.8f, size.height * 0.2f)
+                )
+                // Cloud
+                drawCircle(Color.White, radius = 40f, center = Offset(size.width * 0.3f, size.height * 0.3f))
+                drawCircle(Color.White, radius = 50f, center = Offset(size.width * 0.35f, size.height * 0.28f))
+                drawCircle(Color.White, radius = 30f, center = Offset(size.width * 0.28f, size.height * 0.32f))
+            }
+            SecurityState.SUSPICIOUS -> {
+                // Dim sun
+                drawCircle(
+                    color = Color(0xFFFF8C00),
+                    radius = 50f,
+                    center = Offset(size.width * 0.7f, size.height * 0.25f)
+                )
+                // Dark cloud
+                drawCircle(Color.DarkGray, radius = 45f, center = Offset(size.width * 0.4f, size.height * 0.3f))
+            }
+            SecurityState.DANGER -> {
+                // Glitch lines
+                val lineCount = 15
+                repeat(lineCount) {
+                    val startX = Random.nextFloat() * size.width
+                    val startY = Random.nextFloat() * size.height
+                    drawLine(
+                        color = Color.Red.copy(alpha = 0.5f),
+                        start = Offset(startX, startY),
+                        end = Offset(startX + Random.nextFloat() * 50f, startY + Random.nextFloat() * 50f),
+                        strokeWidth = 2f
+                    )
+                }
+                // Electric arc (simplified)
+                drawCircle(
+                    color = Color.White.copy(alpha = 0.3f),
+                    radius = size.width * 0.1f,
+                    center = Offset(size.width * 0.5f, size.height * 0.5f)
+                )
+            }
+        }
+    }
+}

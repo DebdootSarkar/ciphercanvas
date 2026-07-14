@@ -40,44 +40,29 @@ fun CipherCanvasScreen(monitor: NetworkMonitor) {
         }
     }
 
-    val targetColor = when (securityState) {
-        SecurityState.SAFE -> Color(0xFF2E7D32)
-        SecurityState.SUSPICIOUS -> Color(0xFFFF8F00)
-        SecurityState.DANGER -> Color(0xFFC62828)
-    }
+    Box(modifier = Modifier.fillMaxSize()) {
+        // The animated art background
+        CipherCanvasArt(state = securityState)
 
-    val animatedColor by animateColorAsState(
-        targetValue = targetColor,
-        animationSpec = tween(durationMillis = 800)
-    )
-
-    val stateText = when (securityState) {
-        SecurityState.SAFE -> "Network Secure"
-        SecurityState.SUSPICIOUS -> "Mobile Data"
-        SecurityState.DANGER -> "No Connection"
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(animatedColor),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = stateText,
-                fontSize = 28.sp,
-                color = Color.White
-            )
-            Spacer(modifier = Modifier.height(16.dp))
+        // Overlay text (semi-transparent so art shows through)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            verticalArrangement = Arrangement.Bottom,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
             Text(
                 text = when (securityState) {
-                    SecurityState.SAFE -> "☁️ Peaceful"
-                    SecurityState.SUSPICIOUS -> "⚠️ Be Cautious"
-                    SecurityState.DANGER -> "🚫 Disconnected"
+                    SecurityState.SAFE -> "Network Secure"
+                    SecurityState.SUSPICIOUS -> "Mobile Data"
+                    SecurityState.DANGER -> "No Connection"
                 },
-                fontSize = 18.sp,
-                color = Color.White.copy(alpha = 0.8f)
+                fontSize = 24.sp,
+                color = Color.White,
+                modifier = Modifier
+                    .background(Color.Black.copy(alpha = 0.4f))
+                    .padding(8.dp)
             )
         }
     }
