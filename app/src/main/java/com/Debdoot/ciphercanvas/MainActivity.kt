@@ -1,10 +1,10 @@
 package com.Debdoot.ciphercanvas
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
@@ -15,11 +15,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.flow.collectLatest
-import android.Manifest
-import android.content.pm.PackageManager
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import kotlinx.coroutines.flow.collectLatest
 
 class MainActivity : ComponentActivity() {
     private val LOCATION_PERMISSION_REQUEST = 100
@@ -27,9 +25,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Request location permission (required for Wi‑Fi scanning on Android 8+)
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-            != PackageManager.PERMISSION_GRANTED) {
+            != PackageManager.PERMISSION_GRANTED
+        ) {
             ActivityCompat.requestPermissions(
                 this,
                 arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
@@ -46,14 +44,19 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-
 @Composable
 fun CipherCanvasScreen(monitor: NetworkMonitor) {
     var securityState by remember { mutableStateOf(SecurityState.DANGER) }
+    var openNetworks by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(Unit) {
         monitor.getSecurityStateFlow().collectLatest { state ->
             securityState = state
+        }
+    }
+    LaunchedEffect(Unit) {
+        monitor.getOpenNetworkCountFlow().collectLatest { count ->
+            openNetworks = count
         }
     }
 
@@ -83,16 +86,25 @@ fun CipherCanvasScreen(monitor: NetworkMonitor) {
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = when (securityState) {
-                    SecurityState.SAFE -> "☁️ Peaceful"
-                    SecurityState.SUSPICIOUS -> "⚠️ Be Cautious"
+                    SecurityState.SAFE -> "☁️ Peaceful (scanner active)"
+                    SecurityState.SUSPICIOUS -> "⚠️ Open network nearby"
                     SecurityState.DANGER -> "🚫 Disconnected"
                     SecurityState.CRITICAL -> "🔥 Unsecured Wi‑Fi"
                 },
-                fontSize = 16.sp,
+                fontSize = 14.sp,
                 color = Color.White.copy(alpha = 0.8f),
                 modifier = Modifier
                     .background(Color.Black.copy(alpha = 0.3f))
                     .padding(6.dp)
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Open networks: $openNetworks",
+                fontSize = 12.sp,
+                color = Color.White.copy(alpha = 0.6f),
+                modifier = Modifier
+                    .background(Color.Black.copy(alpha = 0.3f))
+                    .padding(4.dp)
             )
         }
     }

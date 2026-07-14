@@ -54,7 +54,7 @@ class NetworkMonitor(context: Context) {
         connectivityManager.registerNetworkCallback(request, networkCallback)
         emitCurrentState()
 
-        // Periodic Wi‑Fi scan for open networks
+        // Periodic Wi‑Fi scan for open networks and threat state
         val scanJob = mainScope.launch {
             while (isActive) {
                 if (ContextCompat.checkSelfPermission(appContext, Manifest.permission.ACCESS_FINE_LOCATION)
@@ -96,11 +96,32 @@ class NetworkMonitor(context: Context) {
         }
     }
 
+    fun getOpenNetworkCountFlow(): Flow<Int> = callbackFlow {
+        val scanJob = mainScope.launch {
+            while (isActive) {
+                if (ContextCompat.checkSelfPermission(appContext, Manifest.permission.ACCESS_FINE_LOCATION)
+                    == PackageManager.PERMISSION_GRANTED
+                ) {
+                    val success = wifiManager.startScan()
+                    if (success) {
+                        delay(2000)
+                        val results = wifiManager.scanResults
+                        val openCount = results.count {
+                            !it.capabilities.contains("EAP") &&
+                            !it.capabilities.contains("PSK") &&
+                            !it.capabilities.contains("WEP")
+                        }
+                        trySend(openCount)
+                    }
+                }
+                delay(10_000)
+            }
+        }
+        awaitClose { scanJob.cancel() }
+    }
+
     private fun isWifiSecure(info: android.net.wifi.WifiInfo): Boolean {
-        // Simplified: check if the network uses any encryption
-        val capabilities = wifiManager.connectionInfo?.ssid?.let { ssid ->
-            wifiManager.scanResults.firstOrNull { it.SSID == ssid }?.capabilities ?: ""
-        } ?: ""
+        val capabilities = wifiManager.scanResults.firstOrNull { it.SSID == info.ssid }?.capabilities ?: ""
         return capabilities.contains("WPA") || capabilities.contains("WEP") || capabilities.contains("PSK")
     }
 }
