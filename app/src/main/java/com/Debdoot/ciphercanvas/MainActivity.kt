@@ -16,12 +16,28 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.flow.collectLatest
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 
 class MainActivity : ComponentActivity() {
+    private val LOCATION_PERMISSION_REQUEST = 100
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val monitor = NetworkMonitor(applicationContext)
 
+        // Request location permission (required for Wi‑Fi scanning on Android 8+)
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+            != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+                LOCATION_PERMISSION_REQUEST
+            )
+        }
+
+        val monitor = NetworkMonitor(applicationContext)
         setContent {
             MaterialTheme {
                 CipherCanvasScreen(monitor)
@@ -29,6 +45,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+
 
 @Composable
 fun CipherCanvasScreen(monitor: NetworkMonitor) {
