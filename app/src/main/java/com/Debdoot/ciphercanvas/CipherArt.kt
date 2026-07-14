@@ -22,7 +22,6 @@ data class Particle(
 
 @Composable
 fun CipherCanvasArt(state: SecurityState, modifier: Modifier = Modifier) {
-    // Animation loop for movement
     val infiniteTransition = rememberInfiniteTransition()
     val tick by infiniteTransition.animateFloat(
         initialValue = 0f,
@@ -30,32 +29,29 @@ fun CipherCanvasArt(state: SecurityState, modifier: Modifier = Modifier) {
         animationSpec = infiniteRepeatable(tween(100, easing = LinearEasing))
     )
 
-    // Generate particles based on state
     val particles = remember { mutableStateListOf<Particle>() }
 
-    // Define background color and particle properties per state
     val backgroundColor = when (state) {
-    SecurityState.SAFE -> Color(0xFF87CEEB)
-    SecurityState.SUSPICIOUS -> Color(0xFFFFA500)
-    SecurityState.DANGER -> Color(0xFF1A0000)
-    SecurityState.CRITICAL -> Color(0xFF2E003E) // deep purple
-}
+        SecurityState.SAFE -> Color(0xFF87CEEB)
+        SecurityState.SUSPICIOUS -> Color(0xFFFFA500)
+        SecurityState.DANGER -> Color(0xFF1A0000)
+        SecurityState.CRITICAL -> Color(0xFF2E003E)
+    }
 
-    // Seed particles when state changes or initially
     LaunchedEffect(state) {
         particles.clear()
         val count = when (state) {
-    SecurityState.SAFE -> 30
-    SecurityState.SUSPICIOUS -> 50
-    SecurityState.DANGER -> 80
-    SecurityState.CRITICAL -> 120
-}
-val baseColor = when (state) {
-    SecurityState.SAFE -> Color(0xFFFFB6C1)
-    SecurityState.SUSPICIOUS -> Color(0xFFD2691E)
-    SecurityState.DANGER -> Color(0xFFFF0000)
-    SecurityState.CRITICAL -> Color(0xFF00FFFF) // cyan sparks
-}
+            SecurityState.SAFE -> 30
+            SecurityState.SUSPICIOUS -> 50
+            SecurityState.DANGER -> 80
+            SecurityState.CRITICAL -> 120
+        }
+        val baseColor = when (state) {
+            SecurityState.SAFE -> Color(0xFFFFB6C1)
+            SecurityState.SUSPICIOUS -> Color(0xFFD2691E)
+            SecurityState.DANGER -> Color(0xFFFF0000)
+            SecurityState.CRITICAL -> Color(0xFF00FFFF)
+        }
         repeat(count) {
             particles.add(
                 Particle(
@@ -71,7 +67,6 @@ val baseColor = when (state) {
         }
     }
 
-    // Update particle positions on every frame
     LaunchedEffect(tick) {
         particles.forEach { p ->
             p.x += p.speedX
@@ -83,10 +78,8 @@ val baseColor = when (state) {
     }
 
     Canvas(modifier = modifier.fillMaxSize()) {
-        // Draw background
         drawRect(color = backgroundColor)
 
-        // Draw particles
         particles.forEach { p ->
             val x = p.x * size.width
             val y = p.y * size.height
@@ -98,40 +91,38 @@ val baseColor = when (state) {
             )
         }
 
-        // Draw state-specific imagery
         when (state) {
-    SecurityState.SAFE -> {
-        // peaceful sky, sun, cloud, petals – unchanged
-        drawCircle(Color(0xFFFFD700), radius = 60f, center = Offset(size.width * 0.8f, size.height * 0.2f))
-        drawCircle(Color.White, radius = 40f, center = Offset(size.width * 0.3f, size.height * 0.3f))
-        drawCircle(Color.White, radius = 50f, center = Offset(size.width * 0.35f, size.height * 0.28f))
-        drawCircle(Color.White, radius = 30f, center = Offset(size.width * 0.28f, size.height * 0.32f))
-    }
-    SecurityState.SUSPICIOUS -> {
-        // orange sky, dark cloud, brown leaves – unchanged
-        drawCircle(Color(0xFFFF8C00), radius = 50f, center = Offset(size.width * 0.7f, size.height * 0.25f))
-        drawCircle(Color.DarkGray, radius = 45f, center = Offset(size.width * 0.4f, size.height * 0.3f))
-    }
-    SecurityState.DANGER -> {
-        // red glitchy background, sparks – unchanged
-        repeat(15) {
-            val startX = Random.nextFloat() * size.width
-            val startY = Random.nextFloat() * size.height
-            drawLine(Color.Red.copy(alpha = 0.5f), Offset(startX, startY),
-                Offset(startX + Random.nextFloat() * 50f, startY + Random.nextFloat() * 50f), 2f)
+            SecurityState.SAFE -> {
+                drawCircle(Color(0xFFFFD700), radius = 60f, center = Offset(size.width * 0.8f, size.height * 0.2f))
+                drawCircle(Color.White, radius = 40f, center = Offset(size.width * 0.3f, size.height * 0.3f))
+                drawCircle(Color.White, radius = 50f, center = Offset(size.width * 0.35f, size.height * 0.28f))
+                drawCircle(Color.White, radius = 30f, center = Offset(size.width * 0.28f, size.height * 0.32f))
+            }
+            SecurityState.SUSPICIOUS -> {
+                drawCircle(Color(0xFFFF8C00), radius = 50f, center = Offset(size.width * 0.7f, size.height * 0.25f))
+                drawCircle(Color.DarkGray, radius = 45f, center = Offset(size.width * 0.4f, size.height * 0.3f))
+            }
+            SecurityState.DANGER -> {
+                repeat(15) {
+                    val startX = Random.nextFloat() * size.width
+                    val startY = Random.nextFloat() * size.height
+                    drawLine(Color.Red.copy(alpha = 0.5f), Offset(startX, startY),
+                        Offset(startX + Random.nextFloat() * 50f, startY + Random.nextFloat() * 50f), 2f)
+                }
+                drawCircle(Color.White.copy(alpha = 0.3f), radius = size.width * 0.1f,
+                    center = Offset(size.width * 0.5f, size.height * 0.5f))
+            }
+            SecurityState.CRITICAL -> {
+                drawRect(Color(0xFF2E003E))
+                repeat(30) {
+                    val startX = Random.nextFloat() * size.width
+                    val startY = Random.nextFloat() * size.height
+                    drawLine(Color.Cyan.copy(alpha = 0.7f), Offset(startX, startY),
+                        Offset(startX + Random.nextFloat() * 80f - 40f, startY + Random.nextFloat() * 80f - 40f), 2f)
+                }
+                drawCircle(Color.White.copy(alpha = 0.5f), radius = 80f,
+                    center = Offset(size.width * 0.5f, size.height * 0.5f))
+            }
         }
-        drawCircle(Color.White.copy(alpha = 0.3f), radius = size.width * 0.1f, center = Offset(size.width * 0.5f, size.height * 0.5f))
-    }
-    SecurityState.CRITICAL -> {
-        // full cyberpunk: dark purple/red sky, many red particles, electric arcs, "danger" kanji-like text
-        drawRect(Color(0xFF2E003E)) // deep purple
-        repeat(30) {
-            val startX = Random.nextFloat() * size.width
-            val startY = Random.nextFloat() * size.height
-            drawLine(Color.Cyan.copy(alpha = 0.7f), Offset(startX, startY),
-                Offset(startX + Random.nextFloat() * 80f - 40f, startY + Random.nextFloat() * 80f - 40f), 2f)
-        }
-        // Central bright flash
-        drawCircle(Color.White.copy(alpha = 0.5f), radius = 80f, center = Offset(size.width * 0.5f, size.height * 0.5f))
     }
 }

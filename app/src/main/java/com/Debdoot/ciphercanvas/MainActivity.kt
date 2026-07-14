@@ -58,10 +58,8 @@ fun CipherCanvasScreen(monitor: NetworkMonitor) {
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // The animated art background
         CipherCanvasArt(state = securityState)
 
-        // Overlay text (semi-transparent so art shows through)
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -74,12 +72,27 @@ fun CipherCanvasScreen(monitor: NetworkMonitor) {
                     SecurityState.SAFE -> "Network Secure"
                     SecurityState.SUSPICIOUS -> "Mobile Data"
                     SecurityState.DANGER -> "No Connection"
+                    SecurityState.CRITICAL -> "⚠️ Open Network Alert"
                 },
                 fontSize = 24.sp,
                 color = Color.White,
                 modifier = Modifier
                     .background(Color.Black.copy(alpha = 0.4f))
                     .padding(8.dp)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = when (securityState) {
+                    SecurityState.SAFE -> "☁️ Peaceful"
+                    SecurityState.SUSPICIOUS -> "⚠️ Be Cautious"
+                    SecurityState.DANGER -> "🚫 Disconnected"
+                    SecurityState.CRITICAL -> "🔥 Unsecured Wi‑Fi"
+                },
+                fontSize = 16.sp,
+                color = Color.White.copy(alpha = 0.8f),
+                modifier = Modifier
+                    .background(Color.Black.copy(alpha = 0.3f))
+                    .padding(6.dp)
             )
         }
     }
