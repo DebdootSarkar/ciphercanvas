@@ -21,31 +21,24 @@ class NetworkMonitor(context: Context) {
         context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
     fun getSecurityStateFlow(): Flow<SecurityState> = callbackFlow {
+        // Helper function defined at the outer scope so it's accessible
+        fun emitCurrentState() {
+            val activeNetwork = connectivityManager.activeNetwork
+            val caps = activeNetwork?.let { connectivityManager.getNetworkCapabilities(it) }
+            val state = when {
+                caps == null -> SecurityState.DANGER
+                caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> SecurityState.SAFE
+                caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> SecurityState.SAFE
+                caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> SecurityState.SUSPICIOUS
+                else -> SecurityState.DANGER
+            }
+            trySend(state)
+        }
+
         val callback = object : ConnectivityManager.NetworkCallback() {
-            override fun onAvailable(network: Network) {
-                emitCurrentState()
-            }
-
-            override fun onLost(network: Network) {
-                emitCurrentState()
-            }
-
-            override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) {
-                emitCurrentState()
-            }
-
-            private fun emitCurrentState() {
-                val activeNetwork = connectivityManager.activeNetwork
-                val caps = activeNetwork?.let { connectivityManager.getNetworkCapabilities(it) }
-                val state = when {
-                    caps == null -> SecurityState.DANGER
-                    caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> SecurityState.SAFE
-                    caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> SecurityState.SAFE
-                    caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> SecurityState.SUSPICIOUS
-                    else -> SecurityState.DANGER
-                }
-                trySend(state)
-            }
+            override fun onAvailable(network: Network) = emitCurrentState()
+            override fun onLost(network: Network) = emitCurrentState()
+            override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) = emitCurrentState()
         }
 
         val request = NetworkRequest.Builder()
@@ -53,12 +46,8 @@ class NetworkMonitor(context: Context) {
             .build()
 
         connectivityManager.registerNetworkCallback(request, callback)
+        emitCurrentState() // initial emission
 
-        // Emit initial state right after registration
-        callback.emitCurrentState()
-
-        awaitClose {
-            connectivityManager.unregisterNetworkCallback(callback)
-        }
+        awaitClose { connectivityManager.unregisterNetworkCallback(callback) }
     }
 }
