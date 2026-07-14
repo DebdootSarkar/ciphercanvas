@@ -23,18 +23,18 @@ class NetworkMonitor(context: Context) {
     fun getSecurityStateFlow(): Flow<SecurityState> = callbackFlow {
         val callback = object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
-                updateState()
+                emitCurrentState()
             }
 
             override fun onLost(network: Network) {
-                updateState()
+                emitCurrentState()
             }
 
             override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) {
-                updateState()
+                emitCurrentState()
             }
 
-            private fun updateState() {
+            private fun emitCurrentState() {
                 val activeNetwork = connectivityManager.activeNetwork
                 val caps = activeNetwork?.let { connectivityManager.getNetworkCapabilities(it) }
                 val state = when {
@@ -54,8 +54,8 @@ class NetworkMonitor(context: Context) {
 
         connectivityManager.registerNetworkCallback(request, callback)
 
-        // Emit initial state
-        callback.updateState()
+        // Emit initial state right after registration
+        callback.emitCurrentState()
 
         awaitClose {
             connectivityManager.unregisterNetworkCallback(callback)
