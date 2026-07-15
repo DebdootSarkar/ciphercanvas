@@ -3,7 +3,6 @@ package com.Debdoot.ciphercanvas
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import java.net.InetAddress
 
 enum class ScanState {
     IDLE,
@@ -30,16 +29,10 @@ class ActiveScanner {
         _scanProgress.value = 0f
         scope.launch {
             try {
-                // Simulate a realistic sweep (real ARP requires root / raw sockets)
                 val hosts = mutableListOf<String>()
-                // Add your local gateway and a couple devices for demonstration
-                val simulatedHosts = listOf(
-                    "192.168.1.1",   // typical gateway
-                    "192.168.1.5",   // some device
-                    "192.168.1.10"
-                )
-                for (i in 1..50) {   // fake steps for animation
-                    delay(150)       // ~7.5 seconds total
+                val simulatedHosts = listOf("192.168.1.1", "192.168.1.5", "192.168.1.10")
+                for (i in 1..50) {
+                    delay(150)
                     _scanProgress.value = i / 50f
                     if (i == 20 && hosts.size < simulatedHosts.size) {
                         hosts.add(simulatedHosts[0])
