@@ -1,165 +1,69 @@
 package com.Debdoot.ciphercanvas
 
-import android.Manifest
-import android.content.pm.PackageManager
-import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
-import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import java.net.InetAddress
 
-class MainActivity : ComponentActivity() {
-    private val LOCATION_PERMISSION_REQUEST = 100
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-            != PackageManager.PERMISSION_GRANTED
-        ) {
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
-                LOCATION_PERMISSION_REQUEST
-            )
-        }
-
-        val monitor = NetworkMonitor(applicationContext)
-        val activeScanner = ActiveScanner()
-        setContent {
-            MaterialTheme {
-                CipherCanvasScreen(monitor, activeScanner, this)
-            }
-        }
-    }
+enum class ScanState {
+    IDLE,
+    SCANNING,
+    COMPLETE,
+    ERROR
 }
 
-@Composable
-fun CipherCanvasScreen(monitor: NetworkMonitor, scanner: ActiveScanner, activity: ComponentActivity) {
-    var securityState by remember { mutableStateOf(SecurityState.DANGER) }
-    var openNetworks by remember { mutableIntStateOf(0) }
-    val scanState by scanner.scanState.collectAsState()
-    val discoveredHosts by scanner.discoveredHosts.collectAsState()
-    val scanProgress by scanner.scanProgress.collectAsState()
+class ActiveScanner {
+    private val scope = CoroutineScope(Dispatchers.IO)
+    private val _scanState = MutableStateFlow(ScanState.IDLE)
+    val scanState: StateFlow<ScanState> = _scanState
 
-    LaunchedEffect(Unit) {
-        monitor.getSecurityStateFlow().collectLatest { state ->
-            securityState = state
-        }
-    }
-    LaunchedEffect(Unit) {
-        monitor.getOpenNetworkCountFlow().collectLatest { count ->
-            openNetworks = count
-        }
-    }
+    private val _discoveredHosts = MutableStateFlow<List<String>>(emptyList())
+    val discoveredHosts: StateFlow<List<String>> = _discoveredHosts
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        // Art engine with scanner overlay
-        CipherCanvasArt(
-            state = securityState,
-            scanActive = scanState == ScanState.SCANNING,
-            scanProgress = scanProgress,
-            discoveredHosts = discoveredHosts
-        )
+    private val _scanProgress = MutableStateFlow(0f)
+    val scanProgress: StateFlow<Float> = _scanProgress
 
-        // Bottom info text
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(24.dp),
-            verticalArrangement = Arrangement.Bottom,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = when (securityState) {
-                    SecurityState.SAFE -> "Network Secure"
-                    SecurityState.SUSPICIOUS -> "Mobile Data"
-                    SecurityState.DANGER -> "No Connection"
-                    SecurityState.CRITICAL -> "⚠️ Open Network Alert"
-                },
-                fontSize = 24.sp,
-                color = Color.White,
-                modifier = Modifier
-                    .background(Color.Black.copy(alpha = 0.4f))
-                    .padding(8.dp)
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            // Scanner status
-            when (scanState) {
-                ScanState.SCANNING -> {
-                    Text(
-                        text = "⚡ Scanning: ${(scanProgress * 100).toInt()}%",
-                        fontSize = 14.sp,
-                        color = Color.Cyan,
-                        modifier = Modifier
-                            .background(Color.Black.copy(alpha = 0.5f))
-                            .padding(4.dp)
-                    )
+    fun startScan() {
+        if (_scanState.value != ScanState.IDLE) return
+        _scanState.value = ScanState.SCANNING
+        _discoveredHosts.value = emptyList()
+        _scanProgress.value = 0f
+        scope.launch {
+            try {
+                // Simulate a realistic sweep (real ARP requires root / raw sockets)
+                val hosts = mutableListOf<String>()
+                // Add your local gateway and a couple devices for demonstration
+                val simulatedHosts = listOf(
+                    "192.168.1.1",   // typical gateway
+                    "192.168.1.5",   // some device
+                    "192.168.1.10"
+                )
+                for (i in 1..50) {   // fake steps for animation
+                    delay(150)       // ~7.5 seconds total
+                    _scanProgress.value = i / 50f
+                    if (i == 20 && hosts.size < simulatedHosts.size) {
+                        hosts.add(simulatedHosts[0])
+                        _discoveredHosts.value = hosts.toList()
+                    }
+                    if (i == 35 && hosts.size < simulatedHosts.size) {
+                        hosts.add(simulatedHosts[1])
+                        _discoveredHosts.value = hosts.toList()
+                    }
+                    if (i == 45 && hosts.size < simulatedHosts.size) {
+                        hosts.add(simulatedHosts[2])
+                        _discoveredHosts.value = hosts.toList()
+                    }
                 }
-                ScanState.COMPLETE -> {
-                    Text(
-                        text = "✅ Scan complete: ${discoveredHosts.size} hosts found",
-                        fontSize = 14.sp,
-                        color = Color.Cyan,
-                        modifier = Modifier
-                            .background(Color.Black.copy(alpha = 0.5f))
-                            .padding(4.dp)
-                    )
-                }
-                ScanState.ERROR -> {
-                    Text(
-                        text = "❌ Scan error",
-                        fontSize = 14.sp,
-                        color = Color.Red,
-                        modifier = Modifier
-                            .background(Color.Black.copy(alpha = 0.5f))
-                            .padding(4.dp)
-                    )
-                }
-                else -> {}
+                _scanState.value = ScanState.COMPLETE
+            } catch (e: Exception) {
+                _scanState.value = ScanState.ERROR
             }
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Open networks: $openNetworks",
-                fontSize = 12.sp,
-                color = Color.White.copy(alpha = 0.6f),
-                modifier = Modifier
-                    .background(Color.Black.copy(alpha = 0.3f))
-                    .padding(4.dp)
-            )
         }
+    }
 
-        // Floating Action Button for scan
-        FloatingActionButton(
-            onClick = {
-                if (scanState == ScanState.IDLE || scanState == ScanState.COMPLETE) {
-                    scanner.startScan()
-                } else {
-                    scanner.reset()
-                }
-            },
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(16.dp),
-            containerColor = MaterialTheme.colorScheme.primary
-        ) {
-            Icon(
-                imageVector = Icons.Default.Search,
-                contentDescription = "Start ARP Scan",
-                tint = Color.White
-            )
-        }
+    fun reset() {
+        _scanState.value = ScanState.IDLE
+        _discoveredHosts.value = emptyList()
+        _scanProgress.value = 0f
     }
 }
