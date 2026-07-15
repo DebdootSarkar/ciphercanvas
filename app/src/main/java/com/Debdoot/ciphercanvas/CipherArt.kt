@@ -6,7 +6,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.drawscope.Stroke
 import kotlin.math.*
 import kotlin.random.Random
 
@@ -37,23 +39,20 @@ fun CipherCanvasArt(
 
     val particles = remember { mutableStateListOf<GlowParticle>() }
 
-    // Background color palette per state
     val bgColors = when (state) {
-        SecurityState.SAFE -> listOf(Color(0xFF1a237e), Color(0xFF4a148c))   // deep blue/purple peaceful
-        SecurityState.SUSPICIOUS -> listOf(Color(0xFFb71c1c), Color(0xFFffab00)) // red/orange
-        SecurityState.DANGER -> listOf(Color(0xFF212121), Color(0xFFb71c1c)) // dark/red
-        SecurityState.CRITICAL -> listOf(Color(0xFF000000), Color(0xFF4a148c)) // black/purple
+        SecurityState.SAFE -> listOf(Color(0xFF1a237e), Color(0xFF4a148c))
+        SecurityState.SUSPICIOUS -> listOf(Color(0xFFb71c1c), Color(0xFFffab00))
+        SecurityState.DANGER -> listOf(Color(0xFF212121), Color(0xFFb71c1c))
+        SecurityState.CRITICAL -> listOf(Color(0xFF000000), Color(0xFF4a148c))
     }
 
-    // Particle color per state
     val particleColor = when (state) {
-        SecurityState.SAFE -> Color(0xFF64ffda)      // cyan
-        SecurityState.SUSPICIOUS -> Color(0xFFffab00) // amber
-        SecurityState.DANGER -> Color(0xFFf44336)    // red
-        SecurityState.CRITICAL -> Color(0xFFea80fc)  // magenta
+        SecurityState.SAFE -> Color(0xFF64ffda)
+        SecurityState.SUSPICIOUS -> Color(0xFFffab00)
+        SecurityState.DANGER -> Color(0xFFf44336)
+        SecurityState.CRITICAL -> Color(0xFFea80fc)
     }
 
-    // Reset particles when state changes
     LaunchedEffect(state) {
         particles.clear()
         val count = when (state) {
@@ -77,7 +76,6 @@ fun CipherCanvasArt(
         }
     }
 
-    // Animate particles each frame
     LaunchedEffect(time) {
         particles.forEach { p ->
             p.x += p.speedX
@@ -95,7 +93,6 @@ fun CipherCanvasArt(
         val w = size.width
         val h = size.height
 
-        // Flowing gradient background
         drawRect(
             brush = Brush.linearGradient(
                 colors = bgColors,
@@ -104,7 +101,6 @@ fun CipherCanvasArt(
             )
         )
 
-        // Glowing orb (sun/eye)
         val sunRadius = when (state) {
             SecurityState.SAFE -> 70f
             SecurityState.SUSPICIOUS -> 55f
@@ -118,17 +114,14 @@ fun CipherCanvasArt(
             SecurityState.CRITICAL -> Color(0xFFab47bc)
         }
         drawCircle(sunColor, sunRadius, Offset(w * 0.85f, h * 0.15f), alpha = 0.8f)
-        // outer glow
         drawCircle(sunColor.copy(alpha = 0.3f), sunRadius * 1.5f, Offset(w * 0.85f, h * 0.15f))
 
-        // Particles
         particles.forEach { p ->
             val px = p.x * w
             val py = p.y * h
             drawCircle(p.color, p.radius, Offset(px, py), alpha = p.life)
         }
 
-        // ---- Boss battle overlay (unchanged) ----
         if (scanActive) {
             drawRect(
                 brush = Brush.radialGradient(
