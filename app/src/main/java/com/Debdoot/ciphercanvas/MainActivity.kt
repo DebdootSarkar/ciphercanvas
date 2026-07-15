@@ -7,8 +7,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,18 +37,21 @@ class MainActivity : ComponentActivity() {
         }
 
         val monitor = NetworkMonitor(applicationContext)
+        val activeScanner = ActiveScanner()
         setContent {
             MaterialTheme {
-                CipherCanvasScreen(monitor)
+                CipherCanvasScreen(monitor, activeScanner, this)
             }
         }
     }
 }
 
 @Composable
-fun CipherCanvasScreen(monitor: NetworkMonitor) {
+fun CipherCanvasScreen(monitor: NetworkMonitor, scanner: ActiveScanner, activity: ComponentActivity) {
     var securityState by remember { mutableStateOf(SecurityState.DANGER) }
     var openNetworks by remember { mutableIntStateOf(0) }
+    val scanState by scanner.scanState.collectAsState()
+    val discoveredHosts by scanner.discoveredHosts.collectAsState()
 
     LaunchedEffect(Unit) {
         monitor.getSecurityStateFlow().collectLatest { state ->
@@ -61,8 +65,15 @@ fun CipherCanvasScreen(monitor: NetworkMonitor) {
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        CipherCanvasArt(state = securityState)
+        // Pass scanner state and hosts to the art engine for boss overlay
+        CipherCanvasArt(
+            state = securityState,
+            scanActive = scanState is ScanState.SCANNING || scanState is ScanState.SCANNING_PROGRESS,
+            scanProgress = (scanState as? ScanState.SCANNING_PROGRESS)?.progress ?: 0f,
+            discoveredHosts = discoveredHosts
+        )
 
+        // Bottom info text
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -83,21 +94,23 @@ fun CipherCanvasScreen(monitor: NetworkMonitor) {
                     .background(Color.Black.copy(alpha = 0.4f))
                     .padding(8.dp)
             )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = when (securityState) {
-                    SecurityState.SAFE -> "☁️ Peaceful (scanner active)"
-                    SecurityState.SUSPICIOUS -> "⚠️ Open network nearby"
-                    SecurityState.DANGER -> "🚫 Disconnected"
-                    SecurityState.CRITICAL -> "🔥 Unsecured Wi‑Fi"
-                },
-                fontSize = 14.sp,
-                color = Color.White.copy(alpha = 0.8f),
-                modifier = Modifier
-                    .background(Color.Black.copy(alpha = 0.3f))
-                    .padding(6.dp)
-            )
             Spacer(modifier = Modifier.height(4.dp))
+            if (scanState !is ScanState.IDLE) {
+                Text(
+                    text = when (scanState) {
+                        is ScanState.SCANNING -> "⚡ Scanning network..."
+                        is ScanState.SCANNING_PROGRESS -> "⚡ Scanning: ${(scanState as ScanState.SCANNING_PROGRESS).progress * 100}%"
+                        ScanState.COMPLETE -> "✅ Scan complete: ${discoveredHosts.size} hosts found"
+                        else -> ""
+                    },
+                    fontSize = 14.sp,
+                    color = Color.Cyan,
+                    modifier = Modifier
+                        .background(Color.Black.copy(alpha = 0.5f))
+                        .padding(4.dp)
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = "Open networks: $openNetworks",
                 fontSize = 12.sp,
@@ -105,6 +118,27 @@ fun CipherCanvasScreen(monitor: NetworkMonitor) {
                 modifier = Modifier
                     .background(Color.Black.copy(alpha = 0.3f))
                     .padding(4.dp)
+            )
+        }
+
+        // Floating Action Button to trigger scan
+        FloatingActionButton(
+            onClick = {
+                if (scanState is ScanState.IDLE || scanState is ScanState.COMPLETE) {
+                    scanner.startScan()
+                } else {
+                    scanner.reset()
+                }
+            },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(16.dp),
+            containerColor = MaterialTheme.colorScheme.primary
+        ) {
+            Icon(
+                imageVector = Icons.Default.Search,
+                contentDescription = "Start ARP Scan",
+                tint = Color.White
             )
         }
     }

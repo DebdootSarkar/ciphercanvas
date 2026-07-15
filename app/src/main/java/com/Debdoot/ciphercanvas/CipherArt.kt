@@ -12,10 +12,8 @@ import androidx.compose.ui.graphics.drawscope.*
 import kotlin.math.*
 import kotlin.random.Random
 
-// Mutable 2D vector
 data class Vec2(var x: Float, var y: Float)
 
-// A single glow particle (firefly, ember, spark)
 class GlowParticle(
     val pos: Vec2,
     val vel: Vec2,
@@ -25,7 +23,13 @@ class GlowParticle(
 )
 
 @Composable
-fun CipherCanvasArt(state: SecurityState, modifier: Modifier = Modifier) {
+fun CipherCanvasArt(
+    state: SecurityState,
+    scanActive: Boolean = false,
+    scanProgress: Float = 0f,
+    discoveredHosts: List<String> = emptyList(),
+    modifier: Modifier = Modifier
+) {
     val infiniteTransition = rememberInfiniteTransition()
     val time by infiniteTransition.animateFloat(
         initialValue = 0f,
@@ -74,7 +78,6 @@ fun CipherCanvasArt(state: SecurityState, modifier: Modifier = Modifier) {
             p.pos.y += p.vel.y
             p.life -= 0.002f
             if (p.life <= 0f || p.pos.x < -0.1f || p.pos.x > 1.1f || p.pos.y > 1.1f || p.pos.y < -0.1f) {
-                // Respawn: mutate existing pos and vel objects, do NOT reassign the references
                 p.pos.x = Random.nextFloat()
                 p.pos.y = Random.nextFloat() * 0.5f
                 p.life = 1f
@@ -92,6 +95,7 @@ fun CipherCanvasArt(state: SecurityState, modifier: Modifier = Modifier) {
         val w = size.width
         val h = size.height
 
+        // Background gradient
         val gradientColors = when (state) {
             SecurityState.SAFE -> listOf(Color(0xFF87CEEB), Color(0xFF4682B4))
             SecurityState.SUSPICIOUS -> listOf(Color(0xFFFFA500), Color(0xFF8B0000))
@@ -106,7 +110,7 @@ fun CipherCanvasArt(state: SecurityState, modifier: Modifier = Modifier) {
             )
         )
 
-        // Ground
+        // Ground / horizon
         when (state) {
             SecurityState.SAFE -> {
                 drawPath(
@@ -198,6 +202,48 @@ fun CipherCanvasArt(state: SecurityState, modifier: Modifier = Modifier) {
                 val x = Random.nextFloat() * w
                 val y = Random.nextFloat() * h
                 drawLine(Color.Cyan.copy(alpha = 0.4f), Offset(x, y), Offset(x, y + 20f), 1f)
+            }
+        }
+
+        // ================= BOSS BATTLE OVERLAY =================
+        if (scanActive) {
+            // Red vignette
+            drawRect(
+                brush = Brush.radialGradient(
+                    colors = listOf(Color.Red.copy(alpha = 0.5f), Color.Transparent),
+                    center = Offset(w / 2, h / 2),
+                    radius = w * 0.8f
+                )
+            )
+            // Scan progress arc
+            drawArc(
+                color = Color.Cyan,
+                startAngle = -90f,
+                sweepAngle = 360f * scanProgress,
+                useCenter = false,
+                topLeft = Offset(w / 2 - 60f, h / 2 - 60f),
+                size = Size(120f, 120f),
+                style = Stroke(width = 6f)
+            )
+            // Central boss eye
+            drawCircle(Color.Black, 40f, Offset(w / 2, h / 2))
+            drawCircle(Color.White, 20f, Offset(w / 2, h / 2))
+            drawCircle(Color.Red, 8f, Offset(w / 2, h / 2))
+
+            // Enemy drones (one per discovered host)
+            discoveredHosts.forEachIndexed { index, ip ->
+                val angle = (index * 137.5f) % 360f // golden angle
+                val radius = 150f + scanProgress * 50f
+                val x = w / 2 + radius * cos(Math.toRadians(angle.toDouble())).toFloat()
+                val y = h / 2 + radius * sin(Math.toRadians(angle.toDouble())).toFloat()
+                drawCircle(Color.Red, 15f, Offset(x, y))
+                drawCircle(Color.Yellow, 5f, Offset(x, y)) // drone eye
+                drawLine(
+                    Color.Red.copy(alpha = 0.3f),
+                    Offset(w / 2, h / 2),
+                    Offset(x, y),
+                    1f
+                )
             }
         }
     }
