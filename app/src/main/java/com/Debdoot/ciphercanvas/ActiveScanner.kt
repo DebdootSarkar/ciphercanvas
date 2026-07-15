@@ -5,6 +5,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import java.net.InetAddress
 
+enum class ScanState {
+    IDLE,
+    SCANNING,
+    COMPLETE,
+    ERROR
+}
+
 class ActiveScanner {
     private val scope = CoroutineScope(Dispatchers.IO)
     private val _scanState = MutableStateFlow(ScanState.IDLE)
@@ -13,13 +20,16 @@ class ActiveScanner {
     private val _discoveredHosts = MutableStateFlow<List<String>>(emptyList())
     val discoveredHosts: StateFlow<List<String>> = _discoveredHosts
 
+    private val _scanProgress = MutableStateFlow(0f)
+    val scanProgress: StateFlow<Float> = _scanProgress
+
     fun startScan() {
         if (_scanState.value != ScanState.IDLE) return
         _scanState.value = ScanState.SCANNING
         _discoveredHosts.value = emptyList()
+        _scanProgress.value = 0f
         scope.launch {
             try {
-                // Determine local IP prefix (e.g., 192.168.1.)
                 val localIp = InetAddress.getLocalHost().hostAddress
                 val prefix = localIp?.substringBeforeLast(".") ?: "192.168.1"
                 val hosts = mutableListOf<String>()
@@ -30,8 +40,7 @@ class ActiveScanner {
                         hosts.add(ip)
                         _discoveredHosts.value = hosts.toList()
                     }
-                    // Emit progress
-                    _scanState.value = ScanState.SCANNING_PROGRESS(i.toFloat() / 254f)
+                    _scanProgress.value = i.toFloat() / 254f
                 }
                 _scanState.value = ScanState.COMPLETE
             } catch (e: Exception) {
@@ -43,13 +52,6 @@ class ActiveScanner {
     fun reset() {
         _scanState.value = ScanState.IDLE
         _discoveredHosts.value = emptyList()
+        _scanProgress.value = 0f
     }
-}
-
-enum class ScanState {
-    IDLE,
-    SCANNING,
-    SCANNING_PROGRESS(val progress: Float = 0f),
-    COMPLETE,
-    ERROR
 }

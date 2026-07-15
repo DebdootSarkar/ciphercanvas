@@ -52,6 +52,7 @@ fun CipherCanvasScreen(monitor: NetworkMonitor, scanner: ActiveScanner, activity
     var openNetworks by remember { mutableIntStateOf(0) }
     val scanState by scanner.scanState.collectAsState()
     val discoveredHosts by scanner.discoveredHosts.collectAsState()
+    val scanProgress by scanner.scanProgress.collectAsState()
 
     LaunchedEffect(Unit) {
         monitor.getSecurityStateFlow().collectLatest { state ->
@@ -65,11 +66,11 @@ fun CipherCanvasScreen(monitor: NetworkMonitor, scanner: ActiveScanner, activity
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // Pass scanner state and hosts to the art engine for boss overlay
+        // Art engine with scanner overlay
         CipherCanvasArt(
             state = securityState,
-            scanActive = scanState is ScanState.SCANNING || scanState is ScanState.SCANNING_PROGRESS,
-            scanProgress = (scanState as? ScanState.SCANNING_PROGRESS)?.progress ?: 0f,
+            scanActive = scanState == ScanState.SCANNING,
+            scanProgress = scanProgress,
             discoveredHosts = discoveredHosts
         )
 
@@ -95,20 +96,39 @@ fun CipherCanvasScreen(monitor: NetworkMonitor, scanner: ActiveScanner, activity
                     .padding(8.dp)
             )
             Spacer(modifier = Modifier.height(4.dp))
-            if (scanState !is ScanState.IDLE) {
-                Text(
-                    text = when (scanState) {
-                        is ScanState.SCANNING -> "⚡ Scanning network..."
-                        is ScanState.SCANNING_PROGRESS -> "⚡ Scanning: ${(scanState as ScanState.SCANNING_PROGRESS).progress * 100}%"
-                        ScanState.COMPLETE -> "✅ Scan complete: ${discoveredHosts.size} hosts found"
-                        else -> ""
-                    },
-                    fontSize = 14.sp,
-                    color = Color.Cyan,
-                    modifier = Modifier
-                        .background(Color.Black.copy(alpha = 0.5f))
-                        .padding(4.dp)
-                )
+            // Scanner status
+            when (scanState) {
+                ScanState.SCANNING -> {
+                    Text(
+                        text = "⚡ Scanning: ${(scanProgress * 100).toInt()}%",
+                        fontSize = 14.sp,
+                        color = Color.Cyan,
+                        modifier = Modifier
+                            .background(Color.Black.copy(alpha = 0.5f))
+                            .padding(4.dp)
+                    )
+                }
+                ScanState.COMPLETE -> {
+                    Text(
+                        text = "✅ Scan complete: ${discoveredHosts.size} hosts found",
+                        fontSize = 14.sp,
+                        color = Color.Cyan,
+                        modifier = Modifier
+                            .background(Color.Black.copy(alpha = 0.5f))
+                            .padding(4.dp)
+                    )
+                }
+                ScanState.ERROR -> {
+                    Text(
+                        text = "❌ Scan error",
+                        fontSize = 14.sp,
+                        color = Color.Red,
+                        modifier = Modifier
+                            .background(Color.Black.copy(alpha = 0.5f))
+                            .padding(4.dp)
+                    )
+                }
+                else -> {}
             }
             Spacer(modifier = Modifier.height(8.dp))
             Text(
@@ -121,10 +141,10 @@ fun CipherCanvasScreen(monitor: NetworkMonitor, scanner: ActiveScanner, activity
             )
         }
 
-        // Floating Action Button to trigger scan
+        // Floating Action Button for scan
         FloatingActionButton(
             onClick = {
-                if (scanState is ScanState.IDLE || scanState is ScanState.COMPLETE) {
+                if (scanState == ScanState.IDLE || scanState == ScanState.COMPLETE) {
                     scanner.startScan()
                 } else {
                     scanner.reset()
