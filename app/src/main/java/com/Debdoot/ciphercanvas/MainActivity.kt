@@ -8,7 +8,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -136,7 +136,7 @@ fun CipherCanvasScreen(monitor: NetworkMonitor, scanner: ActiveScanner, activity
                 .background(Color(0x80000000), shape = MaterialTheme.shapes.small)
         ) {
             Icon(
-                imageVector = Icons.Default.Wifi,
+                imageVector = Icons.Default.Search,
                 contentDescription = "ARP Scan",
                 tint = if (scanState == ScanState.SCANNING) Color.Cyan else Color.White,
                 modifier = Modifier.size(24.dp)
