@@ -65,6 +65,13 @@ fun CipherCanvasScreen(monitor: NetworkMonitor, scanner: ActiveScanner, activity
         }
     }
 
+    // Reset scanner if network is lost (avoids stale banner)
+    LaunchedEffect(securityState) {
+        if (securityState == SecurityState.DANGER) {
+            scanner.reset()
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         CipherCanvasArt(
             state = securityState,
@@ -73,8 +80,8 @@ fun CipherCanvasScreen(monitor: NetworkMonitor, scanner: ActiveScanner, activity
             discoveredHosts = discoveredHosts
         )
 
-        // Top banner for scan status
-        if (scanState == ScanState.SCANNING || scanState == ScanState.COMPLETE) {
+        // Top banner for scan status (only show if not DANGER)
+        if ((scanState == ScanState.SCANNING || scanState == ScanState.COMPLETE) && securityState != SecurityState.DANGER) {
             Box(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -120,13 +127,13 @@ fun CipherCanvasScreen(monitor: NetworkMonitor, scanner: ActiveScanner, activity
             )
         }
 
-        // Scan button (top-right, subtle)
+        // Scan button (top-right)
         IconButton(
             onClick = {
-                if (scanState == ScanState.IDLE || scanState == ScanState.COMPLETE) {
+                if (securityState != SecurityState.DANGER &&
+                    (scanState == ScanState.IDLE || scanState == ScanState.COMPLETE)
+                ) {
                     scanner.startScan()
-                } else {
-                    scanner.reset()
                 }
             },
             modifier = Modifier
